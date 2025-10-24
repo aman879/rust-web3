@@ -49,18 +49,22 @@ where
     loop {
         match filter_stream.next().await {
             Some(Ok(_)) => {
-                 if let Some(confirmation_block_number) = check.check().await? {
+                if let Some(confirmation_block_number) = check.check().await? {
                     let block_number = eth.block_number().await?;
                     if confirmation_block_number.low_u64() + confirmations as u64 <= block_number.low_u64() {
                         return Ok(());
                     }
                 }
-            },
+            }
             Some(Err(e)) => {
-                return Err(error::Error::Transport(error::TransportError::Message(format!("Stream error: {e}").into())));
-            },
+                return Err(error::Error::Transport(error::TransportError::Message(
+                    format!("Stream error: {e}").into(),
+                )));
+            }
             None => {
-                return Err(error::Error::Transport(error::TransportError::Message("Stream ended unexpectedly".into())));
+                return Err(error::Error::Transport(error::TransportError::Message(
+                    "Stream ended unexpectedly".into(),
+                )));
             }
         }
     }
@@ -84,18 +88,13 @@ async fn send_transaction_with_confirmation_<T: Transport>(
         let eth = eth.clone();
         wait_for_confirmations(eth, eth_filter, poll_interval, confirmations, confirmation_check).await?;
     }
-    
-    let receipt = eth
-        .transaction_receipt(hash)
-        .await?
-        .ok_or_else(|| {
-            error::Error::Transport(error::TransportError::Message(
-                format!(
-                    "Transaction receipt not found for hash {:?} after {} confirmations",
-                    hash, confirmations
-                )
-            ))
-        })?;
+
+    let receipt = eth.transaction_receipt(hash).await?.ok_or_else(|| {
+        error::Error::Transport(error::TransportError::Message(format!(
+            "Transaction receipt not found for hash {:?} after {} confirmations",
+            hash, confirmations
+        )))
+    })?;
 
     Ok(receipt)
 }
